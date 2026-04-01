@@ -8,22 +8,23 @@ const AdminDashboard = () => {
     students: 0,
     instructors: 0,
   });
+  const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
       if (!token) return;
-      const coursesRes = await axios.get(`${baseUrl}/course/get-all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
 
-      const usersRes = await axios.get(`${baseUrl}/users/get-all`, {
+      const config = {
         headers: { Authorization: `Bearer ${token}` },
-      });
+      };
 
-      const instructorsRes = await axios.get(`${baseUrl}/instructor/get-all`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const [coursesRes, usersRes, instructorsRes] = await Promise.all([
+        axios.get(`${baseUrl}/course/get-all`, config),
+        axios.get(`${baseUrl}/users/get-all`, config),
+        axios.get(`${baseUrl}/instructor/get-all`, config),
+      ]);
 
       setStats({
         courses: coursesRes.data.course?.length || coursesRes.data.length || 0,
@@ -34,10 +35,12 @@ const AdminDashboard = () => {
           0,
       });
     } catch (error) {
-      console.log(
+      console.error(
         "Error fetching stats:",
         error.response?.data || error.message,
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,26 +49,35 @@ const AdminDashboard = () => {
   }, []);
 
   const statsArray = [
-    { title: "Total Courses", value: stats.courses },
-    { title: "Total Students", value: stats.students },
-    { title: "Total Instructors", value: stats.instructors },
+    { title: "Total Courses", value: stats.courses, color: "text-blue-600" },
+    { title: "Total Students", value: stats.students, color: "text-green-600" },
+    {
+      title: "Total Instructors",
+      value: stats.instructors,
+      color: "text-purple-600",
+    },
   ];
 
   return (
-    <div>
-      <h3 className="text-xl font-semibold mb-6">Admin Dashboard</h3>
+    <div className="p-4">
+      <h3 className="text-2xl font-bold mb-6 text-gray-800">Admin Overview</h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {statsArray.map((stat, index) => (
           <div
             key={index}
-            className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition"
+            className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300"
           >
-            <p className="text-gray-500 text-sm">{stat.title}</p>
-            <h3 className="text-2xl font-bold mt-2">{stat.value}</h3>
+            <p className="text-gray-500 font-medium uppercase tracking-wider text-xs">
+              {stat.title}
+            </p>
+            <h3 className={`text-3xl font-extrabold mt-2 ${stat.color}`}>
+              {loading ? "..." : stat.value}
+            </h3>
           </div>
         ))}
       </div>
+
     </div>
   );
 };
